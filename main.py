@@ -34,4 +34,5 @@ for sentence in sentences:
 
     #print(generate(" comprehend | " + sentence + "Вопрос: " + text, max_length=32), "\n")
     #print("\n")
+    print()
     
