@@ -6,6 +6,7 @@ tokenizer = T5Tokenizer.from_pretrained("cointegrated/rut5-base-multitask")
 model = T5ForConditionalGeneration.from_pretrained("cointegrated/rut5-base-multitask")
 
 qa_model = pipeline("question-answering", "timpal0l/mdeberta-v3-base-squad2")
+arr = []
 
 def generate(text, **kwargs):
     inputs = tokenizer(text, return_tensors='pt')
@@ -29,10 +30,10 @@ for sentence in sentences:
     #modified = sentence + "" + str(random.random()) + ""
     ask = generate(" ask | " + sentence, max_length=64)
     print(ask)
-    print(qa_model(question = ask, context = sentence)) # type: ignore
+    #print(qa_model(question = ask, context = sentence)) # type: ignore
 
-
+    arr.append(qa_model(question = ask, context = sentence)) # type: ignore
     #print(generate(" comprehend | " + sentence + "Вопрос: " + text, max_length=32), "\n")
     #print("\n")
-    print()
+    print(arr[0])
     
