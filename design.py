@@ -1,16 +1,23 @@
 import sys
+import re
+import random
+import torch
+import json
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QLineEdit, QFileDialog, QTableWidget,
-    QTableWidgetItem, QAbstractItemView, QSizePolicy
+    QTableWidgetItem, QAbstractItemView, QSizePolicy, QMessageBox
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
+from transformers import T5ForConditionalGeneration, T5Tokenizer, pipeline
 from docx import Document
-import json
-#from transformers import pipeline
 import qtmodern.styles
 import qtmodern.windows
+from main import generate
+
+tokenizer = T5Tokenizer.from_pretrained("cointegrated/rut5-base-multitask")
+model = T5ForConditionalGeneration.from_pretrained("cointegrated/rut5-base-multitask")
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -98,7 +105,7 @@ class MainWindow(QMainWindow):
                 background-color: #336dbf;
             }
         """)
-        #self.generate_button.clicked.connect(self.generate_questions)
+        self.generate_button.clicked.connect(self.generate_questions)
 
         self.questions_output = QTextEdit()
         self.questions_output.setStyleSheet("""
@@ -146,12 +153,10 @@ class MainWindow(QMainWindow):
 
         # Создаем компоновщик для первой кнопки справа
         self.button1_layout = QHBoxLayout()
-        #self.button1_layout.addStretch(0)
         self.button1_layout.addWidget(self.save_button)
 
         # Создаем компоновщик для второй кнопки справа
         self.button2_layout = QHBoxLayout()
-        #self.button2_layout.addStretch(0)
         self.button2_layout.addWidget(self.view_button)
 
 
@@ -219,7 +224,29 @@ class MainWindow(QMainWindow):
         self.doc_content = "\n".join([para.text for para in doc.paragraphs])
         self.file_label.setText(f"Загружен документ: {file_path}")
 
-    #def generate_questions(self):
+    def generate_questions(self):
+        if not self.doc_content:
+            QMessageBox.warning(self, "Ошибка", "Документ не загружен")
+            return
+        
+        arr = list()
+
+        text = self.doc_content
+        # for paragraph in doc.paragraphs:
+        #     text += paragraph.text + "\n"
+        
+        #sentences = split_text_into_sentences(text)
+        sentence_enders = re.compile(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s')
+        sentences = sentence_enders.split(text)
+        sentences = [s.strip() for s in sentences if s.strip()]
+
+        for sentence in sentences:
+            #modified = sentence + "" + str(random.random()) + ""
+            ask = generate(" ask | " + sentence, max_length=64)
+            arr.append(ask)
+            #self.questions_output.setText(ask)
+
+        self.questions_output.setText("\n".join(arr))
         # topic = self.topic_input.text()
         # num_questions = int(self.num_questions_input.text())
 
@@ -241,14 +268,28 @@ class MainWindow(QMainWindow):
 
     def save_to_docx(self, file_name):
         doc = Document()
-        doc.add_heading("Сгенерированные вопросы", 0)
-        for q in self.questions:
-            doc.add_paragraph(q)
+        doc.add_heading("Сгенерированные вопросы", 1)
+        questions_text = self.questions_output.toPlainText()
+
+        # Разделяем текст на строки
+        questions_list = questions_text.split('\n')
+
+        # Добавляем каждую строку в документ как абзац
+        for question in questions_list:
+            if question.strip():  # Проверяем, что строка не пустая
+                para = doc.add_paragraph(question.strip())
+
+        # for q in self.questions:
+        #     doc.add_paragraph(q)
         doc.save(file_name)
 
     def save_to_json(self, file_name):
+        questions_text = self.questions_output.toPlainText()
+        questions_list = questions_text.split('\n')
+
         with open(file_name, "w", encoding='utf-8') as f:
-            json.dump(self.questions, f, ensure_ascii=False, indent=4)
+            json.dump(questions_list, f, ensure_ascii=False, indent=4)
+
 
     def view_previous_questions(self):
         self.prev_window = PreviousQuestionsWindow()
@@ -289,7 +330,7 @@ class PreviousQuestionsWindow(QMainWindow):
         self.layout.addWidget(self.back_button)
 
         self.load_previous_questions()
-
+    
     def load_previous_questions(self):
         try:
             with open("generated_questions.json", "r", encoding='utf-8') as f:
@@ -307,3 +348,12 @@ if __name__ == '__main__':
     mw = qtmodern.windows.ModernWindow(main_window)
     mw.show()
     sys.exit(app.exec_())
+
+
+
+
+def split_text_into_sentences(text):
+    sentence_enders = re.compile(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s')
+    sentences = sentence_enders.split(text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    return sentences
