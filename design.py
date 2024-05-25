@@ -2,13 +2,13 @@ import sys
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QLineEdit, QFileDialog, QTableWidget,
-    QTableWidgetItem, QAbstractItemView
+    QTableWidgetItem, QAbstractItemView, QSizePolicy
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
 from docx import Document
 import json
-from transformers import pipeline
+#from transformers import pipeline
 import qtmodern.styles
 import qtmodern.windows
 
@@ -16,7 +16,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Тест Генератор")
+        self.setWindowTitle("TEST")
         self.setGeometry(100, 100, 800, 600)
 
         self.central_widget = QWidget()
@@ -46,11 +46,11 @@ class MainWindow(QMainWindow):
                 font-size: 16px;
                 padding: 10px 20px;
                 border-radius: 5px;
-                background-color: #3a86ff;
+                background-color: #7C7C7C;
                 color: white;
             }
             QPushButton:hover {
-                background-color: #336dbf;
+                background-color: #646464;
             }
         """)
         self.file_button.clicked.connect(self.open_file_dialog)
@@ -98,7 +98,7 @@ class MainWindow(QMainWindow):
                 background-color: #336dbf;
             }
         """)
-        self.generate_button.clicked.connect(self.generate_questions)
+        #self.generate_button.clicked.connect(self.generate_questions)
 
         self.questions_output = QTextEdit()
         self.questions_output.setStyleSheet("""
@@ -144,6 +144,35 @@ class MainWindow(QMainWindow):
         """)
         self.view_button.clicked.connect(self.view_previous_questions)
 
+        # Создаем компоновщик для первой кнопки справа
+        self.button1_layout = QHBoxLayout()
+        #self.button1_layout.addStretch(0)
+        self.button1_layout.addWidget(self.save_button)
+
+        # Создаем компоновщик для второй кнопки справа
+        self.button2_layout = QHBoxLayout()
+        #self.button2_layout.addStretch(0)
+        self.button2_layout.addWidget(self.view_button)
+
+
+        # # Создаем горизонтальный компоновщик для кнопок
+        # self.buttons_layout = QHBoxLayout()
+        # self.buttons_layout.addWidget(self.save_button)
+
+        # self.second_buttons_layout = QVBoxLayout()
+        # self.second_buttons_layout.addWidget(self.view_button)
+
+        # # Добавляем кнопки второй пары кнопок в компоновщик
+        # self.buttons_layout.addLayout(self.second_buttons_layout)
+
+        # Добавляем кнопку для генерации вопросов
+        #self.buttons_layout.addWidget(self.generate_button)
+
+        # Добавляем пустой виджет, чтобы кнопки размещались справа
+        # self.empty_widget = QWidget()
+        # self.empty_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # self.buttons_layout.addWidget(self.empty_widget)
+
         self.layout.addWidget(self.file_label)
         self.layout.addWidget(self.file_button)
         self.layout.addWidget(self.topic_label)
@@ -152,8 +181,11 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.num_questions_input)
         self.layout.addWidget(self.generate_button)
         self.layout.addWidget(self.questions_output)
-        self.layout.addWidget(self.save_button)
-        self.layout.addWidget(self.view_button)
+        # self.layout.addWidget(self.save_button)
+        # self.layout.addWidget(self.view_button)
+        self.layout.addLayout(self.button1_layout)
+        self.layout.addLayout(self.button2_layout)
+
 
         self.questions = []
         self.doc_content = ""
@@ -187,25 +219,35 @@ class MainWindow(QMainWindow):
         self.doc_content = "\n".join([para.text for para in doc.paragraphs])
         self.file_label.setText(f"Загружен документ: {file_path}")
 
-    def generate_questions(self):
-        topic = self.topic_input.text()
-        num_questions = int(self.num_questions_input.text())
+    #def generate_questions(self):
+        # topic = self.topic_input.text()
+        # num_questions = int(self.num_questions_input.text())
 
-        generator = pipeline("text2text-generation", model="t5-small")
-        input_text = f"topic: {topic}\n\n{self.doc_content}"
-        questions = generator(input_text, max_length=50, num_return_sequences=num_questions)
+        # generator = pipeline("text2text-generation", model="t5-small")
+        # input_text = f"topic: {topic}\n\n{self.doc_content}"
+        # questions = generator(input_text, max_length=50, num_return_sequences=num_questions)
 
-        self.questions = [q['generated_text'] for q in questions]
-        self.questions_output.setText("\n".join(self.questions))
+        # self.questions = [q['generated_text'] for q in questions]
+        # self.questions_output.setText("\n".join(self.questions))
 
     def save_results(self):
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getSaveFileName(self, "Сохранить результаты", "", "Документы (*.docx);;JSON (*.json)", options=options)
+        if file_name:
+            if file_name.endswith('.docx'):
+                self.save_to_docx(file_name)
+            elif file_name.endswith('.json'):
+                self.save_to_json(file_name)
+
+    def save_to_docx(self, file_name):
         doc = Document()
         doc.add_heading("Сгенерированные вопросы", 0)
         for q in self.questions:
             doc.add_paragraph(q)
-        doc.save("generated_questions.docx")
+        doc.save(file_name)
 
-        with open("generated_questions.json", "w", encoding='utf-8') as f:
+    def save_to_json(self, file_name):
+        with open(file_name, "w", encoding='utf-8') as f:
             json.dump(self.questions, f, ensure_ascii=False, indent=4)
 
     def view_previous_questions(self):
@@ -260,7 +302,7 @@ class PreviousQuestionsWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    qtmodern.styles.light(app)
+    qtmodern.styles.dark(app)
     main_window = MainWindow()
     mw = qtmodern.windows.ModernWindow(main_window)
     mw.show()

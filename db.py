@@ -7,6 +7,7 @@ def main():
     cur = conn.cursor()
     cur.execute("SELECT surname, firstname FROM user")
 
+    cur = conn.cursor()
     #for row in cur:
     #    print(row)
     for surname, firstname in cur:
