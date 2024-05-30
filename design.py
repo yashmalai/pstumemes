@@ -1,23 +1,29 @@
 import sys
 import re
-import random
+# import random
 import torch
 import json
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QLineEdit, QFileDialog, QTableWidget,
-    QTableWidgetItem, QAbstractItemView, QSizePolicy, QMessageBox
+    QTableWidgetItem, QAbstractItemView, QSizePolicy, QMessageBox, QCheckBox
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
-from transformers import T5ForConditionalGeneration, T5Tokenizer, pipeline
+# from transformers import T5ForConditionalGeneration, T5Tokenizer, pipeline
 from docx import Document
 import qtmodern.styles
 import qtmodern.windows
-from main import generate
+# from main import generate
 
-tokenizer = T5Tokenizer.from_pretrained("cointegrated/rut5-base-multitask")
-model = T5ForConditionalGeneration.from_pretrained("cointegrated/rut5-base-multitask")
+# tokenizer = T5Tokenizer.from_pretrained("cointegrated/rut5-base-multitask")
+# model = T5ForConditionalGeneration.from_pretrained("cointegrated/rut5-base-multitask")
+
+# def generate(text, **kwargs):
+#     inputs = tokenizer(text, return_tensors='pt')
+#     with torch.no_grad():
+#         hypotheses = model.generate(**inputs, num_beams=5, **kwargs)  # type: ignore
+#     return tokenizer.decode(hypotheses[0], skip_special_tokens=True)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -92,6 +98,22 @@ class MainWindow(QMainWindow):
             }
         """)
 
+        self.num_questions_input.setMaximumWidth(100)
+
+        self.open_question_checkbox = QCheckBox("Открытый")
+        self.open_question_checkbox.setStyleSheet("font-size: 16px;")
+
+        self.closed_question_checkbox = QCheckBox("Закрытый")
+        self.closed_question_checkbox.setStyleSheet("font-size: 16px;")
+
+        self.matching_question_checkbox = QCheckBox("Соотнесение")
+        self.matching_question_checkbox.setStyleSheet("font-size: 16px;")
+
+        # Создаем горизонтальный компоновщик для метки и ввода количества вопросов
+        self.num_questions_layout = QHBoxLayout()
+        self.num_questions_layout.addWidget(self.num_questions_label)
+        self.num_questions_layout.addWidget(self.num_questions_input)
+
         self.generate_button = QPushButton("Сформировать вопросы")
         self.generate_button.setStyleSheet("""
             QPushButton {
@@ -159,7 +181,6 @@ class MainWindow(QMainWindow):
         self.button2_layout = QHBoxLayout()
         self.button2_layout.addWidget(self.view_button)
 
-
         # # Создаем горизонтальный компоновщик для кнопок
         # self.buttons_layout = QHBoxLayout()
         # self.buttons_layout.addWidget(self.save_button)
@@ -184,6 +205,9 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.topic_input)
         self.layout.addWidget(self.num_questions_label)
         self.layout.addWidget(self.num_questions_input)
+        self.layout.addWidget(self.open_question_checkbox)
+        self.layout.addWidget(self.closed_question_checkbox)
+        self.layout.addWidget(self.matching_question_checkbox)
         self.layout.addWidget(self.generate_button)
         self.layout.addWidget(self.questions_output)
         # self.layout.addWidget(self.save_button)
@@ -240,11 +264,11 @@ class MainWindow(QMainWindow):
         sentences = sentence_enders.split(text)
         sentences = [s.strip() for s in sentences if s.strip()]
 
-        for sentence in sentences:
-            #modified = sentence + "" + str(random.random()) + ""
-            ask = generate(" ask | " + sentence, max_length=64)
-            arr.append(ask)
-            #self.questions_output.setText(ask)
+        # for sentence in sentences:
+        #     #modified = sentence + "" + str(random.random()) + ""
+        #     ask = generate(" ask | " + sentence, max_length=64)
+        #     arr.append(ask)
+        #     #self.questions_output.setText(ask)
 
         self.questions_output.setText("\n".join(arr))
         # topic = self.topic_input.text()
@@ -299,7 +323,7 @@ class PreviousQuestionsWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Ранее сгенерированные вопросы")
+        self.setWindowTitle("Ранее сформированные вопросы")
         self.setGeometry(100, 100, 800, 600)
 
         self.central_widget = QWidget()
@@ -340,7 +364,7 @@ class PreviousQuestionsWindow(QMainWindow):
                     self.table.setItem(i, 0, QTableWidgetItem(question))
         except FileNotFoundError:
             pass
-
+    
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     qtmodern.styles.dark(app)
@@ -348,12 +372,3 @@ if __name__ == '__main__':
     mw = qtmodern.windows.ModernWindow(main_window)
     mw.show()
     sys.exit(app.exec_())
-
-
-
-
-def split_text_into_sentences(text):
-    sentence_enders = re.compile(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s')
-    sentences = sentence_enders.split(text)
-    sentences = [s.strip() for s in sentences if s.strip()]
-    return sentences
